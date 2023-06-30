@@ -2,23 +2,25 @@ const Todo = require("../models/Todo");
 
 //create toto, title should be mendatory
 exports.createTodo = (req, res, next) => {
-  const { nickname, description, title } = req.body;
-
+  const { description, title } = req.body;
   if (!title) {
     return res.status(400).json({ error: "titre non renseigné" });
   }
   const todo = new Todo({
     userId: req.token.userId,
-    nockname: nickname,
     description: description,
     title: title,
+    createAndUpdateDate: new Date(),
   });
+
   todo
     .save()
     .then(() => {
-      Todo.find({ userId: req.token.userId })
+      Todo
+        .find({ userId: req.token.userId })
+        .sort({ createAndUpdateDate: -1 })
         .then((todos) => {
-          res.status(200).json(todos);
+          return res.status(200).json(todos);
         })
         .catch((error) => res.status(400).json({ error }));
     })
@@ -28,7 +30,7 @@ exports.createTodo = (req, res, next) => {
 //get all todo when you go on main page
 exports.getAllTodos = (req, res, next) => {
   Todo.find({ userId: req.token.userId })
-  .sort({ createAndUpdateDate: -1 })
+    .sort({ createAndUpdateDate: -1 })
     .then((todos) => {
       return res.status(200).json(todos);
     })
@@ -44,24 +46,37 @@ exports.getOneTodo = (req, res, next) => {
 
 //modify one todo
 exports.modifyOneTodo = (req, res, next) => {
-  const { title, description, state } = req.body;
-  if (!title || !description || !state) {
+  const { description } = req.body;
+  if (!description) {
     return res.status(400).json({ error: "bad parameters" });
   }
-  Todo.findOneAndUpdate(
+  Todo.updateOne(
     { _id: req.params.idTodo },
-    { title: title, description: description, state: state, createAndUpdateDate: new Date() },
-    { new: true } //return new version
+    { description: description, createAndUpdateDate: new Date() }
   )
     .then((updatedTodo) => {
-      if (!updatedTodo) {
-        return res.status(404).json({ message: "Todo not found" });
-      } else {
-        return res.status(200).json({message:"message modifié"})
-      }
+      return res.status(200).json({ message: "message modifié" });
     })
     .catch((error) => {
       res.status(400).json({ error });
+    });
+};
+
+//modify state
+exports.modifyTodoState = (req, res, next) => {
+  const { state } = req.body;
+  if (!state) {
+    return res.status(400).json({ error: "bad parameters" });
+  }
+  Todo.updateOne(
+    { _id: req.params.idTodo },
+    { state: state, createAndUpdateDate: new Date() }
+  )
+    .then(() => {
+      return res.status(200).json({ message: "state modifié" });
+    })
+    .catch((error) => {
+      return res.status(400).json({ error });
     });
 };
 
